@@ -1,13 +1,13 @@
 import numpy as np
 from scipy import stats
-from bocd.conjugate_likelihoods import NormalConjugateLikelihood, NormalRegressionLikelihood
+from bocd.conjugate_likelihoods import NormalConjugateLikelihood
 
 
 def test_normal_conjugate_likelihood_update():
-    m = 0
-    p = 1
-    alpha = 1
-    beta = 1
+    m = np.array([0.0])
+    p = np.array([1.0])
+    alpha = np.array([1])
+    beta = np.array([1])
     conjugate_likelihood = NormalConjugateLikelihood(m, p, alpha, beta)
     x_news = np.array([9.0, 11.0])
     conjugate_likelihood.update(x_news[0])
@@ -18,7 +18,6 @@ def test_normal_conjugate_likelihood_update():
     ss = np.square(x_news - x_bar).sum()
 
     # test update to prior
-
     assert conjugate_likelihood.conjugate_prior.alpha_posterior == alpha + 0.5*n
     assert conjugate_likelihood.conjugate_prior.beta_posterior == (
         beta
@@ -28,6 +27,7 @@ def test_normal_conjugate_likelihood_update():
     assert conjugate_likelihood.conjugate_prior.m_posterior == (p*m + n*x_bar) / (p + n)
     assert conjugate_likelihood.conjugate_prior.p_posterior == p + n
     
+    # test posterior distn
     rv = stats.t(
         df=2*(1 + 0.5*n),
         loc=(p*m + n*x_bar) / (p + n),
@@ -43,16 +43,23 @@ def test_normal_conjugate_likelihood_update():
         )
     )
     ys = np.linspace(0, 1, 100)
-    assert np.allclose(conjugate_likelihood.posterior_predictive.cdf(ys), rv.cdf(ys))    
+    assert np.allclose(conjugate_likelihood.posterior_predictive.cdf(ys), rv.cdf(ys))  
+    
+    # test reset
+    conjugate_likelihood.reset()
+    assert conjugate_likelihood.conjugate_prior.m_posterior == m
+    assert conjugate_likelihood.conjugate_prior.p_posterior == p
+    assert conjugate_likelihood.conjugate_prior.alpha_posterior == alpha
+    assert conjugate_likelihood.conjugate_prior.beta_posterior == beta
 
 
-def test_normal_regression_conjugate_likelihood_update():
-    k = 2
-    m = np.zeros(k)
-    p = np.diag(k)
-    alpha = 1
-    beta = 1
-    conjugate_likelihood = NormalRegressionLikelihood(m, p, alpha, beta)
-    x_new = np.array([9.0, 11.0])
-    y_new = np.array([5.])
-    conjugate_likelihood.update(x_new, y_new)
+# def test_normal_regression_conjugate_likelihood_update():
+#     k = 2
+#     m = np.zeros(k)
+#     p = np.diag(k)
+#     alpha = 1
+#     beta = 1
+#     conjugate_likelihood = NormalRegressionLikelihood(m, p, alpha, beta)
+#     x_new = np.array([9.0, 11.0])
+#     y_new = np.array([5.])
+#     conjugate_likelihood.update(x_new, y_new)

@@ -10,6 +10,7 @@ class BayesianOnlineChangepointDetection():
     def __init__(self, hazard_func: BaseHazardFunction, conjugate_likelihood: BaseConjugateLikelihood, buffer=256, min_run_length_prob=1e-2):
         # STEP 1: INITIALIZE
         self.time = 0
+        self.offset = 0
         self.buffer = buffer
         self.min_run_length_prob = min_run_length_prob
         self.hazard_func = hazard_func
@@ -20,13 +21,13 @@ class BayesianOnlineChangepointDetection():
         
 
     def _init_trellises(self):
-        self._init_conditional_conditional_changepoint_probs()
+        self._init_conditional_changepoint_probs()
         self._init_run_length_probs_trellis()
         self._init_joint_density_trellis()
         
 
-    def _init_conditional_conditional_changepoint_probs(self, offset=0):
-        self.conditional_changepoint_probs = np.array([self.hazard_func(t+offset) for t in range(self.buffer)])
+    def _init_conditional_changepoint_probs(self):
+        self.conditional_changepoint_probs = np.array([self.hazard_func(t+self.offset) for t in range(self.buffer)])
 
 
     def _init_run_length_probs_trellis(self):
@@ -36,15 +37,17 @@ class BayesianOnlineChangepointDetection():
     
 
     def _update_run_length_probs_trellis(self): 
+        # max possible run length at time t-1 is t-1 -> add offset incase runs have been dropped
+        max_possible_run_length = self.time + self.offset 
         # prob that current run at time t is of length 0
         self.run_length_probs_trellis[0, self.time] = np.dot(
-            self.run_length_probs_trellis[0:self.time, self.time-1],
-            self.conditional_changepoint_probs[0:self.time]  # could index off of offset here
+            self.run_length_probs_trellis[0:max_possible_run_length, self.time-1], 
+            self.conditional_changepoint_probs[0:max_possible_run_length]  # could index off of offset here
         )
         # prob that run at time t grew
         self.run_length_probs_trellis[1:self.time+1, self.time] = np.multiply(
-            self.run_length_probs_trellis[0:self.time, self.time-1],
-            (1 - self.conditional_changepoint_probs[:self.time]) # same here
+            self.run_length_probs_trellis[0:max_possible_run_length, self.time-1],
+            (1 - self.conditional_changepoint_probs[:max_possible_run_length]) # same here
         )
 
 
@@ -56,7 +59,7 @@ class BayesianOnlineChangepointDetection():
     def _update_joint_density_trellis(self, predictive_prob_cond_on_run_legth):
         # cols are time rows are run length
         
-        # CASE 1: density/probability that cp occuered just before new data and thus current run length is 0
+        # CASE 1: density/probability that cp occured just before new data and thus current run length is 0
         self.joint_density_trellis[0, self.time] = (
             np.multiply(
                 self.joint_density_trellis[0:self.time, self.time-1],  # densities/probabilities for all possible run lengths at time t-1
@@ -107,7 +110,7 @@ class BayesianOnlineChangepointDetection():
     #         offset = np.argmax(x[:-1] == x[1:])  #  first index that is above prob thresh
 
 
-    #         self._init_conditional_conditional_changepoint_probs(offset) 
+    #         self._init_conditional_changepoint_probs(offset) 
 
 
     def _expand_buffer(self):      
@@ -124,7 +127,7 @@ class BayesianOnlineChangepointDetection():
             ]
         )
         self.buffer *= 2
-        self._init_conditional_conditional_changepoint_probs()
+        self._init_conditional_changepoint_probs()
 
 
     def posterior_predictive(self, x_new):
@@ -164,30 +167,30 @@ class BayesianOnlineChangepointDetection():
 
 
 
-# if __name__ == "__main__":
-#     from hazard_functions import ExponentialHazardFunction
-#     from conjugate_likelihoods import NormalConjugateLikelihood
+if __name__ == "__main__":
+    from hazard_functions import ExponentialHazardFunction
+    from conjugate_likelihoods import NormalConjugateLikelihood
     
-#     x = np.concatenate(
-#         [
-#             np.random.normal(loc=1, scale=1, size=15),
-#             np.random.normal(loc=-10, scale=2, size=15)
-#         ]
-#     )
+    x = np.concatenate(
+        [
+            np.random.normal(loc=1, scale=1, size=15),
+            np.random.normal(loc=-10, scale=2, size=15)
+        ]
+    )
 
 
-#     bocd = BayesianOnlineChangepointDetection(
-#         hazard_func=ExponentialHazardFunction(scale=5),
-#         conjugate_likelihood=NormalConjugateLikelihood(m=0.0, p=1/10., alpha=1, beta=1),
-#         buffer=8
-#     )
+    bocd = BayesianOnlineChangepointDetection(
+        hazard_func=ExponentialHazardFunction(scale=5),
+        conjugate_likelihood=NormalConjugateLikelihood(m=0.0, p=1/10., alpha=1, beta=1),
+        buffer=8
+    )
 
-#     for i in range(x.shape[0]): 
-#         if i > 20:
-#             pass
-#         bocd.update(x[i])
-#         sample = np.concatenate([v for v in bocd.sample(10).values()])
-#         if i < x.shape[0]-1:
-#          print(f"iter: {i} mean: {sample.mean().round(2)} std: {sample.std().round(2)}, x_[i+1]: {x[i+1].round(2)}")
-#     # print(np.concatenate([v for v in bocd.sample(10).values()]).mean())
-#     # bocd.conjugate_likelihoods[10].conjugate_prior.n
+    for i in range(x.shape[0]): 
+        if i > 20:
+            pass
+        bocd.update(x[i])
+        sample = np.concatenate([v for v in bocd.sample(10).values()])
+        if i < x.shape[0]-1:
+         print(f"iter: {i} mean: {sample.mean().round(2)} std: {sample.std().round(2)}, x_[i+1]: {x[i+1].round(2)}")
+    # print(np.concatenate([v for v in bocd.sample(10).values()]).mean())
+    # bocd.conjugate_likelihoods[10].conjugate_prior.
