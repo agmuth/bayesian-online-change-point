@@ -1,9 +1,9 @@
 format:
-	python run black .
-	python run isort .
+	poetry run black bocd/.
+	poetry run isort bocd/.
 	
 lint: 
-	python run ruff check . --fix
+	poetry run ruff check bocd/. --fix
 
 test:
-	python run pytest tests/.
+	poetry run pytest tests/.
