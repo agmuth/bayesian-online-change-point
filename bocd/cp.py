@@ -10,7 +10,6 @@ class BayesianOnlineChangepointDetection():
     def __init__(self, hazard_func: BaseHazardFunction, conjugate_likelihood: BaseConjugateLikelihood, buffer=256, min_run_length_prob=1e-2):
         # STEP 1: INITIALIZE
         self.time = 0
-        self.offset = 0
         self.buffer = buffer
         self.min_run_length_prob = min_run_length_prob
         self.hazard_func = hazard_func
@@ -27,7 +26,7 @@ class BayesianOnlineChangepointDetection():
         
 
     def _init_conditional_changepoint_probs(self):
-        self.conditional_changepoint_probs = np.array([self.hazard_func(t+self.offset) for t in range(self.buffer)])
+        self.conditional_changepoint_probs = np.array([self.hazard_func(t) for t in range(self.buffer)])
 
 
     def _init_run_length_probs_trellis(self):
@@ -37,17 +36,16 @@ class BayesianOnlineChangepointDetection():
     
 
     def _update_run_length_probs_trellis(self): 
-        # max possible run length at time t-1 is t-1 -> add offset incase runs have been dropped
-        max_possible_run_length = self.time + self.offset 
+        # max possible run length at time t-1 is t-1  
         # prob that current run at time t is of length 0
         self.run_length_probs_trellis[0, self.time] = np.dot(
-            self.run_length_probs_trellis[0:max_possible_run_length, self.time-1], 
-            self.conditional_changepoint_probs[0:max_possible_run_length]  # could index off of offset here
+            self.run_length_probs_trellis[:self.time, self.time-1], 
+            self.conditional_changepoint_probs[:self.time]  # could index off of offset here
         )
         # prob that run at time t grew
         self.run_length_probs_trellis[1:self.time+1, self.time] = np.multiply(
-            self.run_length_probs_trellis[0:max_possible_run_length, self.time-1],
-            (1 - self.conditional_changepoint_probs[:max_possible_run_length]) # same here
+            self.run_length_probs_trellis[:self.time, self.time-1],
+            (1 - self.conditional_changepoint_probs[:self.time]) # same here
         )
 
 
@@ -58,7 +56,6 @@ class BayesianOnlineChangepointDetection():
 
     def _update_joint_density_trellis(self, predictive_prob_cond_on_run_legth):
         # cols are time rows are run length
-        
         # CASE 1: density/probability that cp occured just before new data and thus current run length is 0
         self.joint_density_trellis[0, self.time] = (
             np.multiply(
@@ -102,15 +99,6 @@ class BayesianOnlineChangepointDetection():
             self.conjugate_likelihoods[i].update(x_new)  # update conjugate-lik for run starting at time i with newest data
         self.conjugate_likelihoods.append(deepcopy(self.conjugate_likelihood))  # add conjugate-lik for run starting now 
 
-
-    # TODO
-    # def _discard_low_probablilty_run_lengths(self):
-    #     x = np.cumsum(self.run_length_probs < self.min_run_length_prob)
-    #     if x[0] == 1:  # at least the first point if below prob thresh
-    #         offset = np.argmax(x[:-1] == x[1:])  #  first index that is above prob thresh
-
-
-    #         self._init_conditional_changepoint_probs(offset) 
 
 
     def _expand_buffer(self):      
