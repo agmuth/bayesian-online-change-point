@@ -3,7 +3,6 @@ import numpy as np
 from bocd.conjugate_likelihoods import BaseConjugateLikelihood
 from bocd.hazard_functions import BaseHazardFunction
 from copy import deepcopy
-from scipy.ndimage import shift
 
 
 class BayesianOnlineChangepointDetection():
@@ -119,7 +118,7 @@ class BayesianOnlineChangepointDetection():
 
 
     def posterior_predictive(self, x_new):
-        return np.dot(self._predict_prob_cond_on_run_length(x_new), self.current_run_start_probs[:self.time]) #TODO: indexing may not be quite right
+        return np.dot(self._predict_prob_cond_on_run_length(x_new), self.current_run_start_probs[:self.time])
     
 
     def sample(self, n: int):
