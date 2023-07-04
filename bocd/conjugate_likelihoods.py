@@ -67,3 +67,4 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
         self.posterior_predictive = stats.nbinom(n=n, p=p)
         
 
+
