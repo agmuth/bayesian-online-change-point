@@ -71,4 +71,40 @@ class GammaConjugatePrior(BaseConjugatePrior):
         self.shape_posterior += x_new
         self.rate_posterior += 1
         
+
+class MultivariateNormalWishartConjugatePrior(BaseConjugatePrior):
+    def __init__(self, mean: np.ndarray, prec: np.ndarray, scale: np.ndarray, df: np.ndarray):
+        self.mean_prior = np.array(mean)    
+        self.prec_prior = np.array(prec)    
+        self.scale_prior = np.array(scale)    
+        self.df_prior = np.array(df)
+        
+        self.mean_posterior = np.array(mean)    
+        self.prec_posterior = np.array(prec)    
+        self.scale_posterior = np.array(scale)    
+        self.df_posterior = np.array(df)
+        
+        self.xs = None
+        
+        
+    def update(self, x_new):
+        
+        if self.xs is None:
+            self.xs = x_new
+            self._p = len(x_new)
+        else:
+            self.xs = np.vstack([self.xs, x_new])
+        
+        n = self.xs.shape[0]
+        x_bar = self.xs.mean(axis=1)
+        
+        self.mean_posterior = (self.prec_prior*self.mean_prior + self.n*x_bar) / (self.prec_prior+self.n)
+        self.prec_posterior = self.prec_prior+self.n
+        self.df_posterior = self.df_prior+self.n
+        self.scale_posterior = np.linalg.inv(
+            np.linalg.inv(self.scale_prior)
+            + (self.xs - x_bar)@(self.xs - x_bar).T 
+            + self.prec_prior*n/(self.prec_prior+n)
+            *(x_bar - self.mean_prior)@(x_bar - self.mean_prior).T
+        )
         

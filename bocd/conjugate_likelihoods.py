@@ -66,5 +66,20 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
         p = self.conjugate_prior.rate_posterior / (self.conjugate_prior.rate_posterior+1)
         self.posterior_predictive = stats.nbinom(n=n, p=p)
         
+        
+class MultivariateNormalConjugateLikelihood(BaseConjugateLikelihood):
+    def __init__(self, mean: np.ndarray, prec: np.ndarray, scale: np.ndarray, df: np.ndarray):
+        self.conjugate_prior = MultivariateNormalWishartConjugatePrior(mean, prec, scale, df)
+        self._update_posterior_predictive()
+        
+    def _update_posterior_predictive(self):
+        df = self.conjugate_prior.df_posterior-self.conjugate_prior._p+1
+        loc = self.conjugate_prior.mean_posterior
+        shape = (
+            np.linalg.inv(self.conjugate_prior.scale_posterior)
+            * (self.conjugate_prior.prec_posterior+1)
+            / (self.conjugate_prior.prec_posterior*df)
+        )
+        self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 
 
