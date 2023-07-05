@@ -2,6 +2,7 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 
+# https://en.wikipedia.org/wiki/Conjugate_prior
 
 class BaseConjugatePrior(ABC):
     @abstractmethod
