@@ -10,7 +10,7 @@ class BaseConjugatePrior(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    def update(self, x_new):
+    def update(self, x_new, *args, **kwargs):
         raise NotImplementedError
     
 
@@ -22,7 +22,7 @@ class BetaPrior(BaseConjugatePrior):
         self.shape2_posterior = np.array(shape2_prior)
         
            
-    def update(self, x_new: np.ndarray):
+    def update(self, x_new: np.ndarray, *args, **kwargs):
         # bernoullie update
         self.shape1_posterior += x_new
         self.shape2_posterior += (1 - x_new)
@@ -35,7 +35,7 @@ class GammaConjugatePrior(BaseConjugatePrior):
         self.shape_posterior = np.array(shape_prior)    
         self.rate_posterior = np.array(rate_prior)
         
-    def update(self, x_new: np.ndarray):
+    def update(self, x_new: np.ndarray, *args, **kwargs):
         # poisson update
         self.shape_posterior += x_new
         self.rate_posterior += 1
@@ -58,7 +58,7 @@ class NormalGammaConjugatePrior(BaseConjugatePrior):
         self.sum_of_xs_squared = 0
         
     
-    def update(self, x_new: np.ndarray):
+    def update(self, x_new: np.ndarray, *args, **kwargs):
         self.n += 1
         self.sum_of_xs += x_new
         self.sum_of_xs_squared += x_new**2
@@ -95,7 +95,7 @@ class MultivariateNormalGammaConjugatePrior(BaseConjugatePrior):
         self.ys = None
         
     
-    def update(self, x_new: np.ndarray, y_new: np.ndarray):
+    def update(self, x_new: np.ndarray, y_new: np.ndarray, *args, **kwargs):
         if len(x_new.shape) == 1:
             x_new = np.expand_dims(x_new, 0)
         if len(y_new.shape) == 1:
