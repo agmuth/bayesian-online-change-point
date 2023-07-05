@@ -8,7 +8,6 @@ from bocd.conjugate_priors import *
 class BaseConjugateLikelihood(ABC):
     def update(self, x_new):
         self.conjugate_prior.update(x_new)
-        self._update_posterior_predictive()
     
     def posterior_predictive_pdf(self, x):
         return self.posterior_predictive.pdf(x)
@@ -23,16 +22,15 @@ class BaseConjugateLikelihood(ABC):
         return self.posterior_predictive.rvs(size)
     
     @abstractmethod
-    def _update_posterior_predictive(self):
+    def update_posterior_predictive(self):
         raise NotImplementedError
     
     
 class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, a: np.ndarray, b: np.ndarray):
         self.conjugate_prior = BetaPrior(a, b)
-        self._update_posterior_predictive()
         
-    def _update_posterior_predictive(self):
+    def update_posterior_predictive(self):
         p = self.conjugate_prior.a / (self.conjugate_prior.a + self.conjugate_prior.b)
         self.posterior_predictive = stats.binom(n=1, p=p)
         
@@ -40,9 +38,8 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
 class NormalConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, m, p, alpha, beta):
         self.conjugate_prior = NormalGammaConjugatePrior(m, p, alpha, beta)
-        self._update_posterior_predictive()
 
-    def _update_posterior_predictive(self):
+    def update_posterior_predictive(self):
         df = 2*self.conjugate_prior.alpha_posterior
         loc = self.conjugate_prior.m_posterior
         scale = np.sqrt(
@@ -55,13 +52,8 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
 class PoissonConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, shape: np.ndarray, rate: np.ndarray):
         self.conjugate_prior = GammaConjugatePrior(shape, rate)
-        self._update_posterior_predictive()
         
-    def update(self, x_new):
-        self.conjugate_prior.update(x_new)
-        self._update_posterior_predictive()
-        
-    def _update_posterior_predictive(self):
+    def update_posterior_predictive(self):
         n = self.conjugate_prior.shape_posterior
         p = self.conjugate_prior.rate_posterior / (self.conjugate_prior.rate_posterior+1)
         self.posterior_predictive = stats.nbinom(n=n, p=p)
@@ -70,9 +62,8 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
 class MultivariateNormalConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, mean: np.ndarray, prec: np.ndarray, scale: np.ndarray, df: np.ndarray):
         self.conjugate_prior = MultivariateNormalWishartConjugatePrior(mean, prec, scale, df)
-        self._update_posterior_predictive()
         
-    def _update_posterior_predictive(self):
+    def update_posterior_predictive(self):
         df = self.conjugate_prior.df_posterior-self.conjugate_prior._p+1
         loc = self.conjugate_prior.mean_posterior
         shape = (
@@ -82,4 +73,18 @@ class MultivariateNormalConjugateLikelihood(BaseConjugateLikelihood):
         )
         self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 
+
+class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
+    def __init__(self, mean: np.ndarray, prec: np.ndarray, shape: np.ndarray, rate: np.ndarray):
+        self.conjugate_prior = MultivariateNormalGammaConjugatePrior(mean, prec, shape, rate)
+    
+    def update_posterior_predictive(self, x_new: np.ndarray):
+        # http://ericfrazerlock.com/LM_GoryDetails.pdf
+        df = self.conjugate_prior.shape_posterior*2
+        loc = x_new @ self.conjugate_prior.mean_posterior
+        shape = (
+            self.conjugate_prior.rate_posterior/self.conjugate_prior.shape_posterior
+            * np.eye(x_new.shape[0]) + self.conjugate_prior.xs @ np.linalg.inv(self.conjugate_prior.prec_posterior) @ self.conjugate_prior.xs.T
+        )
+        self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 

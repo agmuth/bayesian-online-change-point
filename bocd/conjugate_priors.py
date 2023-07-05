@@ -108,3 +108,52 @@ class MultivariateNormalWishartConjugatePrior(BaseConjugatePrior):
             *(x_bar - self.mean_prior)@(x_bar - self.mean_prior).T
         )
         
+        
+class MultivariateNormalGammaConjugatePrior(BaseConjugatePrior):
+    # http://ericfrazerlock.com/LM_GoryDetails.pdf
+    def __init__(self, mean: np.ndarray, prec: np.ndarray, shape: np.ndarray, rate: np.ndarray):
+        self.mean_prior = np.array(mean)    
+        self.prec_prior = np.array(prec)    
+        self.shape_prior = np.array(shape)    
+        self.rate_prior = np.array(rate)
+        
+        self.mean_posterior = np.array(mean)    
+        self.prec_posterior = np.array(prec)    
+        self.shape_posterior = np.array(shape)    
+        self.rate_posterior = np.array(rate)
+        
+        self.xx = 0
+        self.b = 0
+        self.upsilon = 0
+        self.nu = 0
+        
+        self.xs = None
+        self.ys = None
+        
+    
+    def update(self, x_new: np.ndarray, y_new: np.ndarray):
+        
+        if self.xs is None:
+            self.xs = x_new
+            self.ys = y_new
+        else:
+            self.xs = np.vstack([self.xs, x_new])
+            self.ys = np.vstack([self.ys, y_new])
+            
+        n = self.xs.shape[0]
+        xx = self.xs.T @ self.xs
+        
+        self.prec_posterior = self.prec_prior + xx
+        self.mean_posterior = np.linalg.inv(self.prec_posterior) @ (self.prec_prior @ self.mean_prior + self.xs @ self.y)
+        
+        self.shape_posterior = self.shape_prior + 0.5*n
+        self.rate_posterior = (
+            self.rate_prior
+            + 0.5 * (
+                self.mean_prior.T @ self.prec_prior @ self.mean_prior
+                + self.ys.T @ self.ys
+                - self.mean_posterior @ self.prec_posterior @ self.mean_posterior
+            )
+        )
+        
+        
