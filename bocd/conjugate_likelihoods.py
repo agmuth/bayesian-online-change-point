@@ -35,6 +35,16 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
         self.posterior_predictive = stats.binom(n=1, p=p)
         
 
+class PoissonConjugateLikelihood(BaseConjugateLikelihood):
+    def __init__(self, shape: np.ndarray, rate: np.ndarray):
+        self.conjugate_prior = GammaConjugatePrior(shape, rate)
+        
+    def update_posterior_predictive(self):
+        n = self.conjugate_prior.shape_posterior
+        p = self.conjugate_prior.rate_posterior / (self.conjugate_prior.rate_posterior+1)
+        self.posterior_predictive = stats.nbinom(n=n, p=p)
+        
+
 class NormalConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, m, p, alpha, beta):
         self.conjugate_prior = NormalGammaConjugatePrior(m, p, alpha, beta)
@@ -47,31 +57,6 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
             * ((self.conjugate_prior.p_posterior + 1)/self.conjugate_prior.p_posterior)
         )
         self.posterior_predictive = stats.t(df=df, loc=loc, scale=scale)
-
-
-class PoissonConjugateLikelihood(BaseConjugateLikelihood):
-    def __init__(self, shape: np.ndarray, rate: np.ndarray):
-        self.conjugate_prior = GammaConjugatePrior(shape, rate)
-        
-    def update_posterior_predictive(self):
-        n = self.conjugate_prior.shape_posterior
-        p = self.conjugate_prior.rate_posterior / (self.conjugate_prior.rate_posterior+1)
-        self.posterior_predictive = stats.nbinom(n=n, p=p)
-        
-        
-class MultivariateNormalConjugateLikelihood(BaseConjugateLikelihood):
-    def __init__(self, mean: np.ndarray, prec: np.ndarray, scale: np.ndarray, df: np.ndarray):
-        self.conjugate_prior = MultivariateNormalWishartConjugatePrior(mean, prec, scale, df)
-        
-    def update_posterior_predictive(self):
-        df = self.conjugate_prior.df_posterior-self.conjugate_prior._p+1
-        loc = self.conjugate_prior.mean_posterior
-        shape = (
-            np.linalg.inv(self.conjugate_prior.scale_posterior)
-            * (self.conjugate_prior.prec_posterior+1)
-            / (self.conjugate_prior.prec_posterior*df)
-        )
-        self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 
 
 class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
