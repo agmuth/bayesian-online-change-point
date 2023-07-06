@@ -67,11 +67,13 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
     
     def update_posterior_predictive(self, x_new: np.ndarray):
         # http://ericfrazerlock.com/LM_GoryDetails.pdf
+        if len(x_new.shape) == 1:
+            x_new = np.expand_dims(x_new, 0)
         df = self.conjugate_prior.shape_posterior*2
         loc = x_new @ self.conjugate_prior.mean_posterior
         shape = (
             self.conjugate_prior.rate_posterior/self.conjugate_prior.shape_posterior
-            * np.eye(x_new.shape[0]) + self.conjugate_prior.xs @ np.linalg.inv(self.conjugate_prior.prec_posterior) @ self.conjugate_prior.xs.T
+            * np.eye(x_new.shape[0]) + x_new @ np.linalg.inv(self.conjugate_prior.prec_posterior) @ x_new.T
         )
         self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 

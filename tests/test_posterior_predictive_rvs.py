@@ -7,7 +7,7 @@ from scipy import stats
 np.random.seed(583930)
 
 
-def test_bernoulli_beta_mean_convergence():
+def test_bernoulli_beta_posterior_predictive_rv():
     n_obvs = int(1e3)
     p_true = 1/3
     x_news = np.random.binomial(1, p_true, n_obvs)
@@ -19,14 +19,15 @@ def test_bernoulli_beta_mean_convergence():
     
     for x_new in x_news:
         model.update(x_new)
+    model.update_posterior_predictive()
     assert np.isclose(
-        model.conjugate_prior.shape1_posterior / (model.conjugate_prior.shape1_posterior + model.conjugate_prior.shape2_posterior),
+        model.posterior_predictive_rvs(n_obvs).mean(),
         p_true,
         atol=5e-2
     )
     
 
-def test_poisson_gamma_mean_convergence():
+def test_poisson_gamma_posterior_predictive_rv():
     n_obvs = int(1e5)
     lam_true = 4.5
     x_news = np.random.poisson(lam_true, n_obvs)
@@ -37,13 +38,14 @@ def test_poisson_gamma_mean_convergence():
     )
     for x_new in x_news:
         model.update(x_new)
+    model.update_posterior_predictive()
     assert np.isclose(
-        (model.conjugate_prior.shape_posterior / model.conjugate_prior.rate_posterior),
+        model.posterior_predictive_rvs(n_obvs).mean(),
         lam_true,
         atol=1e-2
     )
         
-def test_normal_normal_gamma_mean_convergence():
+def test_normal_normal_gamma_posterior_predictive_rv():
     n_obvs = int(1e4)
     loc_true = 5
     prec_true = 2
@@ -57,20 +59,15 @@ def test_normal_normal_gamma_mean_convergence():
     )
     for x_new in x_news:
         model.update(x_new)
-    
+    model.update_posterior_predictive()
     assert np.isclose(
-        (model.conjugate_prior.shape_posterior / model.conjugate_prior.rate_posterior),
-        prec_true,
-        atol=1e-1
-    )
-    assert np.isclose(
-        model.conjugate_prior.mean_posterior,
+        model.posterior_predictive_rvs(n_obvs).mean(),
         loc_true,
-        atol=1e-2
+        atol=5e-2
     )
     
     
-def test_normal_regression_multivariate_normal_gamma_mean_convergence():
+def test_normal_regression_multivariate_normal_gamma_posterior_predictive_rv():
     n_obvs = int(1e4)
     p = 1
     x_news = np.hstack(
@@ -88,18 +85,12 @@ def test_normal_regression_multivariate_normal_gamma_mean_convergence():
         shape_prior=np.array([1]),
         rate_prior=np.array([1]),
     )
-    for x_new, y_new in zip(x_news, y_news):
+    for x_new, y_new in zip(x_news[:-1], y_news[:-1]):
         model.update(x_new, y_new)
+
+    model.update_posterior_predictive(x_news[-1])
     assert np.isclose(
-        np.linalg.norm(
-            (model.conjugate_prior.shape_posterior / model.conjugate_prior.rate_posterior)
-            - prec_true
-        ),
-        0,
-        atol=1e-1
-    )
-    assert np.isclose(
-        np.linalg.norm(model.conjugate_prior.mean_posterior-b_true),
-        0,
+        model.posterior_predictive_rvs(n_obvs).mean(),
+        x_news[-1] @ b_true,
         atol=1e-1
     )
