@@ -10,6 +10,7 @@ class BaseConjugateLikelihood(ABC):
     """Abstract base class for conjugate likelihoods.
     ref for most likelihoods: https://en.wikipedia.org/wiki/Conjugate_prior
     """
+
     def update(self, x_new, *args, **kwargs):
         """updates conjugate prior"""
         self.conjugate_prior.update(x_new, *args, **kwargs)
@@ -38,6 +39,7 @@ class BaseConjugateLikelihood(ABC):
 
 class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
     """Bernoulli/Beta conjugate likelihood/prior implementation."""
+
     def __init__(self, shape1_prior: np.ndarray, shape2_prior: np.ndarray):
         """See docs for `BetaConjugatePrior`."""
         self.conjugate_prior = BetaConjugatePrior(shape1_prior, shape2_prior)
@@ -52,6 +54,7 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
 
 class PoissonConjugateLikelihood(BaseConjugateLikelihood):
     """Poisson/Gamma conjugate likelihood/prior implementation."""
+
     def __init__(self, shape_prior: np.ndarray, rate_prior: np.ndarray):
         """See docs for `GammaConjugatePrior`."""
         self.conjugate_prior = GammaConjugatePrior(shape_prior, rate_prior)
@@ -66,6 +69,7 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
 
 class NormalConjugateLikelihood(BaseConjugateLikelihood):
     """Normal/Normal Gamma conjugate/likelihood implementation."""
+
     def __init__(
         self,
         mean_prior: np.ndarray,
@@ -93,6 +97,7 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
 
 class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
     """Linear Regression/Normal Gamma conjugate likelihood/prior implementation."""
+
     def __init__(
         self,
         mean_prior: np.ndarray,
@@ -114,7 +119,7 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
         x_new : np.ndarray
             New covariates.
         """
-        
+
         if len(x_new.shape) == 1:
             x_new = np.expand_dims(x_new, 0)
         df = self.conjugate_prior.shape_posterior * 2

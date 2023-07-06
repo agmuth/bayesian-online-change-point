@@ -3,12 +3,11 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
-
-
 class BaseConjugatePrior(ABC):
     """Abstract base class for conjugate priors.
     ref for most priors: https://en.wikipedia.org/wiki/Conjugate_prior
     """
+
     @abstractmethod
     def __init__(self, *args, **kwargs):
         raise NotImplementedError
@@ -20,6 +19,7 @@ class BaseConjugatePrior(ABC):
 
 class BetaConjugatePrior(BaseConjugatePrior):
     """Beta Conjugate Prior for Bernoulli likelihood/data."""
+
     def __init__(self, shape1_prior: np.ndarray, shape2_prior: np.ndarray):
         """init
 
@@ -49,6 +49,7 @@ class BetaConjugatePrior(BaseConjugatePrior):
 
 class GammaConjugatePrior(BaseConjugatePrior):
     """Gamma Conjugate Prior for Poisson likelihood/data."""
+
     def __init__(self, shape_prior: np.ndarray, rate_prior: np.ndarray):
         """init
 
@@ -78,6 +79,7 @@ class GammaConjugatePrior(BaseConjugatePrior):
 
 class NormalGammaConjugatePrior(BaseConjugatePrior):
     """Normal-Gamma Conjugate Prior for Normal likelihood/data."""
+
     def __init__(
         self,
         mean_prior: np.ndarray,
@@ -148,6 +150,7 @@ class MultivariateNormalGammaConjugatePrior(BaseConjugatePrior):
     """Multivariate Normal Gamma conjugate prior for Bayesian linear regression
     ref: http://ericfrazerlock.com/LM_GoryDetails.pdf
     """
+
     def __init__(
         self,
         mean_prior: np.ndarray,

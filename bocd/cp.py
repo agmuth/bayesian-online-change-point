@@ -10,17 +10,27 @@ class BayesianOnlineChangepointDetection:
     """Implementation of Bayesian Online Change Point detection
     ref: https://arxiv.org/pdf/0710.3742.pdf
     """
+
     def __init__(
         self,
         hazard_func: BaseHazardFunction,
         conjugate_likelihood: BaseConjugateLikelihood,
         buffer=256,
-        min_run_length_prob=1e-2,
     ):
+        """init
+
+        Parameters
+        ----------
+        hazard_func : BaseHazardFunction
+            Hazard function for time to changepoint.
+        conjugate_likelihood : BaseConjugateLikelihood
+            Initialized `BaseConjugateLikelihood` object.
+        buffer : int, optional
+            size of initial arrays, by default 256
+        """
         # STEP 1: INITIALIZE
         self.time = 0
         self.buffer = buffer
-        self.min_run_length_prob = min_run_length_prob
         self.hazard_func = hazard_func
         self.conjugate_likelihood = (
             conjugate_likelihood  # save as reference conjugate likelihood
@@ -32,16 +42,19 @@ class BayesianOnlineChangepointDetection:
         self._init_trellises()
 
     def _init_trellises(self):
+        """init various trellises for prob passing."""
         self._init_conditional_changepoint_probs()
         self._init_run_length_probs_trellis()
         self._init_joint_density_trellis()
 
     def _init_conditional_changepoint_probs(self):
+        """init conditional changepoint probs from hazard func."""
         self.conditional_changepoint_probs = np.array(
             [self.hazard_func(t) for t in range(self.buffer)]
         )
 
     def _init_run_length_probs_trellis(self):
+        """init run length probs trellis."""
         # recursively build up
         self.run_length_probs_trellis = np.zeros(
             (self.buffer, self.buffer)
@@ -49,6 +62,7 @@ class BayesianOnlineChangepointDetection:
         self.run_length_probs_trellis[0, 0] = 1  # changepoint at time t=0
 
     def _update_run_length_probs_trellis(self):
+        """update run length probs trellis up to current time."""
         # max possible run length at time t-1 is t-1
         # prob that current run at time t is of length 0
         self.run_length_probs_trellis[0, self.time] = np.dot(
@@ -64,10 +78,12 @@ class BayesianOnlineChangepointDetection:
         )
 
     def _init_joint_density_trellis(self):
+        """init joint density (run length, data) trellis."""
         self.joint_density_trellis = np.zeros((self.buffer, self.buffer))
         self.joint_density_trellis[0, 0] = 1
 
     def _update_joint_density_trellis(self, predictive_prob_cond_on_run_legth):
+        """update joint density (run length, data) trellis to current time."""
         # cols are time rows are run length
         # CASE 1: density/probability that cp occured just before new data and thus current run length is 0
         self.joint_density_trellis[0, self.time] = (
@@ -103,7 +119,18 @@ class BayesianOnlineChangepointDetection:
         )
 
     def _predict_prob_cond_on_run_length(self, x_new):
-        # get density of `x_new` cond on run starting at times 0, 1, . . ., self.time
+        """Get density of `x_new` cond on run starting at times 0, 1, . . ., self.time
+
+        Parameters
+        ----------
+        x_new : np.array like
+            Must compatible with underlying conjugate likelihood/prior model.
+
+        Returns
+        -------
+        np.array
+            Vector of conditional probs.
+        """
         predictive_prob_cond_on_run_legth = np.zeros(
             self.time + 1
         )  # need time inclusive for new process/cp
@@ -117,6 +144,7 @@ class BayesianOnlineChangepointDetection:
         return predictive_prob_cond_on_run_legth
 
     def _calc_current_run_start_probs(self):
+        """Calc the probs of the current run starting at time 0, 1, ..., self.time-1."""
         evidence = self.joint_density_trellis[:, self.time].sum()
         self.current_run_start_probs = (
             self.joint_density_trellis[:, self.time] / evidence
@@ -125,6 +153,7 @@ class BayesianOnlineChangepointDetection:
         self.current_run_start_probs /= self.current_run_start_probs.sum()
 
     def _update_conjugate_likelihoods(self, x_new):
+        """Update conjugate likelihoods corresponding to run lengths starting at times 0, 1, ..., self.time-1."""
         for i in range(self.time):
             self.conjugate_likelihoods[i].update(
                 x_new
@@ -134,6 +163,7 @@ class BayesianOnlineChangepointDetection:
         )  # add conjugate-lik for run starting now
 
     def _expand_buffer(self):
+        """Double array dimensions."""
         self.run_length_probs_trellis = np.vstack(
             [
                 np.hstack(
@@ -156,13 +186,27 @@ class BayesianOnlineChangepointDetection:
         self.buffer *= 2
         self._init_conditional_changepoint_probs()
 
-    def posterior_predictive(self, x_new):
-        return np.dot(
-            self._predict_prob_cond_on_run_length(x_new),
-            self.current_run_start_probs[: self.time],
-        )
+    # TODO: remove?
+    # def posterior_predictive(self, x_new):
+    #     return np.dot(
+    #         self._predict_prob_cond_on_run_length(x_new),
+    #         self.current_run_start_probs[: self.time],
+    #     )
 
-    def sample(self, n: int):
+    def sample(self, n: int, *args, **kwargs):
+        """Sample from posterior predicitve of underlying conjugate likelihood models conditional on run length.
+
+        Parameters
+        ----------
+        n : int
+            Number of samples to return.
+
+        Returns
+        -------
+        dict
+            Dictionary where key value pairs are `run_length` and samples from the the posterior predictive corresponding to that run length.
+        """
+
         samples = {}
         run_lengths, run_length_counts = np.unique(
             np.random.choice(
@@ -176,6 +220,9 @@ class BayesianOnlineChangepointDetection:
         for run_length, count in zip(run_lengths, run_length_counts):
             if count == 0:
                 continue
+            self.conjugate_likelihoods[run_length].update_posterior_predictive(
+                *args, **kwargs
+            )
             samples[run_length] = self.conjugate_likelihoods[
                 run_length
             ].posterior_predictive_rvs(count)
