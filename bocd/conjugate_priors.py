@@ -2,10 +2,13 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-# https://en.wikipedia.org/wiki/Conjugate_prior
+
 
 
 class BaseConjugatePrior(ABC):
+    """Abstract base class for conjugate priors.
+    ref for most priors: https://en.wikipedia.org/wiki/Conjugate_prior
+    """
     @abstractmethod
     def __init__(self, *args, **kwargs):
         raise NotImplementedError
@@ -15,33 +18,66 @@ class BaseConjugatePrior(ABC):
         raise NotImplementedError
 
 
-class BetaPrior(BaseConjugatePrior):
+class BetaConjugatePrior(BaseConjugatePrior):
+    """Beta Conjugate Prior for Bernoulli likelihood/data."""
     def __init__(self, shape1_prior: np.ndarray, shape2_prior: np.ndarray):
+        """init
+
+        Parameters
+        ----------
+        shape1_prior : np.ndarray
+            Prior for first shape param (alpha).
+        shape2_prior : np.ndarray
+            Prior for second shape param (beta).
+        """
         self.shape1_prior = np.array(shape1_prior)
         self.shape2_prior = np.array(shape2_prior)
         self.shape1_posterior = np.array(shape1_prior)
         self.shape2_posterior = np.array(shape2_prior)
 
     def update(self, x_new: np.ndarray, *args, **kwargs):
-        # bernoullie update
+        """Perform Bernoulli update.
+
+        Parameters
+        ----------
+        x_new : np.ndarray
+            Single occurance of observed Bernoulli data.
+        """
         self.shape1_posterior += x_new
         self.shape2_posterior += 1 - x_new
 
 
 class GammaConjugatePrior(BaseConjugatePrior):
+    """Gamma Conjugate Prior for Poisson likelihood/data."""
     def __init__(self, shape_prior: np.ndarray, rate_prior: np.ndarray):
+        """init
+
+        Parameters
+        ----------
+        shape_prior : np.ndarray
+            Prior for shape param.
+        rate_prior : np.ndarray
+            Prior for rate param.
+        """
         self.shape_prior = np.array(shape_prior)
         self.rate_prior = np.array(rate_prior)
         self.shape_posterior = np.array(shape_prior)
         self.rate_posterior = np.array(rate_prior)
 
     def update(self, x_new: np.ndarray, *args, **kwargs):
-        # poisson update
+        """Perform Poisson update.
+
+        Parameters
+        ----------
+        x_new : np.ndarray
+            Single occurance of observed Poisson data.
+        """
         self.shape_posterior += x_new
         self.rate_posterior += 1
 
 
 class NormalGammaConjugatePrior(BaseConjugatePrior):
+    """Normal-Gamma Conjugate Prior for Normal likelihood/data."""
     def __init__(
         self,
         mean_prior: np.ndarray,
@@ -49,6 +85,19 @@ class NormalGammaConjugatePrior(BaseConjugatePrior):
         shape_prior: np.ndarray,
         rate_prior: np.ndarray,
     ):
+        """init
+
+        Parameters
+        ----------
+        mean_prior : np.ndarray
+            Prior for mean param (normal part).
+        prec_prior : np.ndarray
+            Prior for precision param (normal part).
+        shape_prior : np.ndarray
+            Prior for shape param (gamma part).
+        rate_prior : np.ndarray
+            Prior for rate param (gamma part).
+        """
         self.mean_prior = np.array(mean_prior)
         self.prec_prior = np.array(prec_prior)
         self.shape_prior = np.array(shape_prior)
@@ -64,6 +113,13 @@ class NormalGammaConjugatePrior(BaseConjugatePrior):
         self.sum_of_xs_squared = 0
 
     def update(self, x_new: np.ndarray, *args, **kwargs):
+        """Perform Normal update.
+
+        Parameters
+        ----------
+        x_new : np.ndarray
+            Single occurance of observed Normal data.
+        """
         self.n += 1
         self.sum_of_xs += x_new
         self.sum_of_xs_squared += x_new**2
@@ -89,7 +145,9 @@ class NormalGammaConjugatePrior(BaseConjugatePrior):
 
 
 class MultivariateNormalGammaConjugatePrior(BaseConjugatePrior):
-    # http://ericfrazerlock.com/LM_GoryDetails.pdf
+    """Multivariate Normal Gamma conjugate prior for Bayesian linear regression
+    ref: http://ericfrazerlock.com/LM_GoryDetails.pdf
+    """
     def __init__(
         self,
         mean_prior: np.ndarray,
@@ -97,6 +155,19 @@ class MultivariateNormalGammaConjugatePrior(BaseConjugatePrior):
         shape_prior: np.ndarray,
         rate_prior: np.ndarray,
     ):
+        """init
+
+        Parameters
+        ----------
+        mean_prior : np.ndarray
+            Prior for mean (MVN part) (vector).
+        prec_prior : np.ndarray
+            Prior for precision (MVN part) (matrix).
+        shape_prior : np.ndarray
+            Prior for shape param (gamma part).
+        rate_prior : np.ndarray
+            Prior for rate param (gamma part).
+        """
         self.mean_prior = np.array(mean_prior)
         self.prec_prior = np.array(prec_prior)
         self.shape_prior = np.array(shape_prior)

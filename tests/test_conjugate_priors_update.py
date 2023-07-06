@@ -6,7 +6,7 @@ from bocd.conjugate_priors import *
 def test_beta_prior_update():
     x_news = np.array([1, 0, 1])
     x_news = np.expand_dims(x_news, 1)
-    model = BetaPrior(
+    model = BetaConjugatePrior(
         shape1_prior=np.array([1]),
         shape2_prior=np.array([2]),
     )

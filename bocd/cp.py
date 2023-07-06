@@ -7,6 +7,9 @@ from bocd.hazard_functions import BaseHazardFunction
 
 
 class BayesianOnlineChangepointDetection:
+    """Implementation of Bayesian Online Change Point detection
+    ref: https://arxiv.org/pdf/0710.3742.pdf
+    """
     def __init__(
         self,
         hazard_func: BaseHazardFunction,
@@ -179,6 +182,13 @@ class BayesianOnlineChangepointDetection:
         return samples
 
     def update(self, x_new):
+        """Runs main `update` loop specified in reference paper.
+
+        Parameters
+        ----------
+        x_new : np.array like
+            Must compatible with underlying conjugate likelihood/prior model.
+        """
         # STEP 2: OBSERVE NEW DATAUM
         self.time += 1
         if self.time == self.buffer:
