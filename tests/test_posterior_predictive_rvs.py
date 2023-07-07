@@ -18,7 +18,7 @@ def test_bernoulli_beta_posterior_predictive_rv():
     )
 
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
     model.update_posterior_predictive()
     assert np.isclose(model.posterior_predictive_rvs(n_obvs).mean(), p_true, atol=5e-2)
 
@@ -33,7 +33,7 @@ def test_poisson_gamma_posterior_predictive_rv():
         rate_prior=np.array([1]),
     )
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
     model.update_posterior_predictive()
     assert np.isclose(
         model.posterior_predictive_rvs(n_obvs).mean(), lam_true, atol=1e-2
@@ -53,7 +53,7 @@ def test_normal_normal_gamma_posterior_predictive_rv():
         rate_prior=np.array([1]),
     )
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
     model.update_posterior_predictive()
     assert np.isclose(
         model.posterior_predictive_rvs(n_obvs).mean(), loc_true, atol=5e-2
@@ -77,7 +77,7 @@ def test_normal_regression_multivariate_normal_gamma_posterior_predictive_rv():
         rate_prior=np.array([1]),
     )
     for x_new, y_new in zip(x_news[:-1], y_news[:-1]):
-        model.update(x_new, y_new)
+        model.update_prior(x_new, y_new)
 
     model.update_posterior_predictive(x_news[-1])
     assert np.isclose(

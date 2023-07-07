@@ -11,9 +11,13 @@ class BaseConjugateLikelihood(ABC):
     ref for most likelihoods: https://en.wikipedia.org/wiki/Conjugate_prior
     """
 
-    def update(self, x_new, *args, **kwargs):
+    def update(self, x_new):
         """updates conjugate prior"""
-        self.conjugate_prior.update(x_new, *args, **kwargs)
+        self.update_prior(x_new)
+        self.update_posterior_predictive()
+        
+    def update_prior(self, x_new):
+        self.conjugate_prior.update(x_new)
 
     def posterior_predictive_pdf(self, x):
         """Method to access pdf of posterior predictive."""
@@ -43,8 +47,9 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, shape1_prior: np.ndarray, shape2_prior: np.ndarray):
         """See docs for `BetaConjugatePrior`."""
         self.conjugate_prior = BetaConjugatePrior(shape1_prior, shape2_prior)
+        self.update_posterior_predictive()
 
-    def update_posterior_predictive(self, *args, **kwargs):
+    def update_posterior_predictive(self):
         p = self.conjugate_prior.shape1_posterior / (
             self.conjugate_prior.shape1_posterior
             + self.conjugate_prior.shape2_posterior
@@ -61,6 +66,7 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
     def __init__(self, shape_prior: np.ndarray, rate_prior: np.ndarray):
         """See docs for `GammaConjugatePrior`."""
         self.conjugate_prior = GammaConjugatePrior(shape_prior, rate_prior)
+        self.update_posterior_predictive()
 
     def update_posterior_predictive(self, *args, **kwargs):
         n = self.conjugate_prior.shape_posterior
@@ -87,8 +93,9 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
         self.conjugate_prior = NormalGammaConjugatePrior(
             mean_prior, prec_prior, shape_prior, rate_prior
         )
+        self.update_posterior_predictive()
 
-    def update_posterior_predictive(self, *args, **kwargs):
+    def update_posterior_predictive(self):
         df = 2 * self.conjugate_prior.shape_posterior
         loc = self.conjugate_prior.mean_posterior
         scale = np.sqrt(
@@ -102,7 +109,9 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
 
 
 class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
-    """Linear Regression/Normal Gamma conjugate likelihood/prior implementation."""
+    """Linear Regression/Normal Gamma conjugate likelihood/prior implementation.
+    NOT MEANT TO BE DIRECTLY USED WITH `BayesianOnlineChangepointDetection`.
+    """
 
     def __init__(
         self,
@@ -116,7 +125,23 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
             mean_prior, prec_prior, shape_prior, rate_prior
         )
 
-    def update_posterior_predictive(self, x_new: np.ndarray, *args, **kwargs):
+    def update(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def update_prior(self, x_new: np.ndarray, y_new: np.ndarray):
+        """Update conjugate prior
+
+        Parameters
+        ----------
+        x_new : np.ndarray
+            Covariate vector.
+        y_new : np.ndarray
+            Dependent variable.
+        """
+        self.conjugate_prior.update(x_new, y_new)
+        
+        
+    def update_posterior_predictive(self, x_new: np.ndarray):
         """Update posterior predictive conditional on new covariates
         ref: http://ericfrazerlock.com/LM_GoryDetails.pdf
 
@@ -137,3 +162,30 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
             + x_new @ np.linalg.inv(self.conjugate_prior.prec_posterior) @ x_new.T
         )
         self.posterior_predictive = stats.multivariate_t(loc, shape, df)
+
+
+
+class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihood):
+    def __init__(
+        self,
+        mean_prior: np.ndarray,
+        prec_prior: np.ndarray,
+        shape_prior: np.ndarray,
+        rate_prior: np.ndarray,
+        p: int,
+        x_0: np.ndarray
+    ):
+        """See docs for `MultivariateNormalGammaConjugatePrior`."""
+        super().__init__(mean_prior, prec_prior, shape_prior, rate_prior)
+        self.p = p 
+        self.x_p = x_0  # p most recent obvs
+        
+    def update(self, x_new):
+        """updates conjugate prior"""
+        super().update(x_new=self.x_p, y_new=x_new)
+        self.x_p = np.concatenate(x_new, self.x_p[:-1])
+        self.update_posterior_predictive()
+        
+    def update_posterior_predictive(self):
+        super().update_posterior_predictive(self.x_p)
+    

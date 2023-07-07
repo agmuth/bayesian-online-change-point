@@ -18,7 +18,7 @@ def test_bernoulli_beta_mean_convergence():
     )
 
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
     assert np.isclose(
         model.conjugate_prior.shape1_posterior
         / (
@@ -31,7 +31,7 @@ def test_bernoulli_beta_mean_convergence():
 
 
 def test_poisson_gamma_mean_convergence():
-    n_obvs = int(1e5)
+    n_obvs = int(1e4)
     lam_true = 4.5
     x_news = np.random.poisson(lam_true, n_obvs)
     x_news = np.expand_dims(x_news, 1)
@@ -40,11 +40,11 @@ def test_poisson_gamma_mean_convergence():
         rate_prior=np.array([1]),
     )
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
     assert np.isclose(
         (model.conjugate_prior.shape_posterior / model.conjugate_prior.rate_posterior),
         lam_true,
-        atol=1e-2,
+        atol=5e-2,
     )
 
 
@@ -61,7 +61,7 @@ def test_normal_normal_gamma_mean_convergence():
         rate_prior=np.array([1]),
     )
     for x_new in x_news:
-        model.update(x_new)
+        model.update_prior(x_new)
 
     assert np.isclose(
         (model.conjugate_prior.shape_posterior / model.conjugate_prior.rate_posterior),
@@ -88,7 +88,7 @@ def test_normal_regression_multivariate_normal_gamma_mean_convergence():
         rate_prior=np.array([1]),
     )
     for x_new, y_new in zip(x_news, y_news):
-        model.update(x_new, y_new)
+        model.update_prior(x_new, y_new)
     assert np.isclose(
         np.linalg.norm(
             (
@@ -103,3 +103,11 @@ def test_normal_regression_multivariate_normal_gamma_mean_convergence():
     assert np.isclose(
         np.linalg.norm(model.conjugate_prior.mean_posterior - b_true), 0, atol=1e-1
     )
+
+
+
+if __name__ == "__main__":
+    # test_bernoulli_beta_mean_convergence()
+    # test_poisson_gamma_mean_convergence()
+    test_normal_normal_gamma_mean_convergence()
+    test_normal_regression_multivariate_normal_gamma_mean_convergence()

@@ -158,11 +158,9 @@ class BayesianOnlineChangepointDetection:
             self.conjugate_likelihoods[i].update(
                 x_new
             )  # update conjugate-lik for run starting at time i with newest data
-            self.conjugate_likelihoods[i].update_posterior_predictive(x_new)
         self.conjugate_likelihoods.append(
             deepcopy(self.conjugate_likelihood)
         )  # add conjugate-lik for run starting now
-        self.conjugate_likelihoods[-1].update_posterior_predictive(x_new)
 
     def _expand_buffer(self):
         """Double array dimensions."""
@@ -222,9 +220,6 @@ class BayesianOnlineChangepointDetection:
         for run_length, count in zip(run_lengths, run_length_counts):
             if count == 0:
                 continue
-            self.conjugate_likelihoods[run_length].update_posterior_predictive(
-                *args, **kwargs
-            )
             samples[run_length] = self.conjugate_likelihoods[
                 run_length
             ].posterior_predictive_rvs(count)
