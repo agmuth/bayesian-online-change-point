@@ -104,10 +104,3 @@ def test_normal_regression_multivariate_normal_gamma_mean_convergence():
         np.linalg.norm(model.conjugate_prior.mean_posterior - b_true), 0, atol=1e-1
     )
 
-
-
-if __name__ == "__main__":
-    # test_bernoulli_beta_mean_convergence()
-    # test_poisson_gamma_mean_convergence()
-    test_normal_normal_gamma_mean_convergence()
-    test_normal_regression_multivariate_normal_gamma_mean_convergence()

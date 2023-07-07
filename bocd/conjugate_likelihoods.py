@@ -4,6 +4,7 @@ import numpy as np
 from scipy import stats
 
 from bocd.conjugate_priors import *
+from typing import Optional
 
 
 class BaseConjugateLikelihood(ABC):
@@ -111,6 +112,7 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
 class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
     """Linear Regression/Normal Gamma conjugate likelihood/prior implementation.
     NOT MEANT TO BE DIRECTLY USED WITH `BayesianOnlineChangepointDetection`.
+    Parent class of conjugate AR(P) models which can be used with `BayesianOnlineChangepointDetection`.
     """
 
     def __init__(
@@ -173,17 +175,38 @@ class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihoo
         shape_prior: np.ndarray,
         rate_prior: np.ndarray,
         p: int,
-        x_0: np.ndarray
+        x_0: Optional[np.ndarray]=None
     ):
-        """See docs for `MultivariateNormalGammaConjugatePrior`."""
+        """Conjugate model for AR(p) process.
+
+        Parameters
+        ----------
+        mean_prior : np.ndarray
+            See docs for `NormalRegressionConjugateLikelihood`.
+        prec_prior : np.ndarray
+            See docs for `NormalRegressionConjugateLikelihood`.
+        shape_prior : np.ndarray
+            See docs for `NormalRegressionConjugateLikelihood`.
+        rate_prior : np.ndarray
+            See docs for `NormalRegressionConjugateLikelihood`.
+        p : int
+            Order of AR process.
+        x_0 : Optional[np.ndarray], optional
+            Most recent 1p1 obvs, by default None
+        """
         super().__init__(mean_prior, prec_prior, shape_prior, rate_prior)
         self.p = p 
-        self.x_p = x_0  # p most recent obvs
+        if x_0 is not None:
+            self.x_p = np.hstack([np.ones((1, 1)), x_0])  # p most recent obvs
+        else:
+            self.x_p = np.zeros((1, p+1))
+            self.x_p[0][0] += 1
+        self.update_posterior_predictive()
         
     def update(self, x_new):
         """updates conjugate prior"""
-        super().update(x_new=self.x_p, y_new=x_new)
-        self.x_p = np.concatenate(x_new, self.x_p[:-1])
+        super().update_prior(x_new=self.x_p, y_new=x_new)
+        self.x_p = np.expand_dims(np.hstack([self.x_p[0][0], x_new[0], self.x_p[0][1:-1]]), 0)
         self.update_posterior_predictive()
         
     def update_posterior_predictive(self):
