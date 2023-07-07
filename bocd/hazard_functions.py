@@ -10,6 +10,7 @@ class BaseHazardFunction(ABC):
 
 
 class ExponentialHazardFunction(BaseHazardFunction):
+    """Discrete Exponential hazard function."""
     def __init__(self, scale: float):
         self.scale = scale  # mean time to event
 
@@ -19,7 +20,9 @@ class ExponentialHazardFunction(BaseHazardFunction):
 
 
 class WeibullHazardFunction(BaseHazardFunction):
-    # https://en.wikipedia.org/wiki/Discrete_Weibull_distribution
+    """Discrete Weibull hazard function. 
+    ref: https://en.wikipedia.org/wiki/Discrete_Weibull_distribution
+    """
     def __init__(self, shape, scale):
         self.scale = scale
         self.shape = shape

@@ -210,5 +210,6 @@ class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihoo
         self.update_posterior_predictive()
         
     def update_posterior_predictive(self):
+        """Updates posterior predictive distribution."""
         super().update_posterior_predictive(self.x_p)
     
