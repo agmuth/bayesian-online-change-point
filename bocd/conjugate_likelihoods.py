@@ -32,7 +32,7 @@ class BaseConjugateLikelihood(ABC):
         return self.posterior_predictive.rvs(size)
 
     @abstractmethod
-    def update_posterior_predictive(self):
+    def update_posterior_predictive(self, *args, **kwargs):
         """Implement/construct rv for current posterior predicitve distn based on current posterior."""
         raise NotImplementedError
 
@@ -44,12 +44,15 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
         """See docs for `BetaConjugatePrior`."""
         self.conjugate_prior = BetaConjugatePrior(shape1_prior, shape2_prior)
 
-    def update_posterior_predictive(self):
+    def update_posterior_predictive(self, *args, **kwargs):
         p = self.conjugate_prior.shape1_posterior / (
             self.conjugate_prior.shape1_posterior
             + self.conjugate_prior.shape2_posterior
         )
         self.posterior_predictive = stats.binom(n=1, p=p)
+        
+    def posterior_predictive_pdf(self, x):
+        return self.posterior_predictive.pmf(x)
 
 
 class PoissonConjugateLikelihood(BaseConjugateLikelihood):
@@ -59,12 +62,15 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
         """See docs for `GammaConjugatePrior`."""
         self.conjugate_prior = GammaConjugatePrior(shape_prior, rate_prior)
 
-    def update_posterior_predictive(self):
+    def update_posterior_predictive(self, *args, **kwargs):
         n = self.conjugate_prior.shape_posterior
         p = self.conjugate_prior.rate_posterior / (
             self.conjugate_prior.rate_posterior + 1
         )
         self.posterior_predictive = stats.nbinom(n=n, p=p)
+    
+    def posterior_predictive_pdf(self, x):
+        return self.posterior_predictive.pmf(x)
 
 
 class NormalConjugateLikelihood(BaseConjugateLikelihood):
@@ -82,7 +88,7 @@ class NormalConjugateLikelihood(BaseConjugateLikelihood):
             mean_prior, prec_prior, shape_prior, rate_prior
         )
 
-    def update_posterior_predictive(self):
+    def update_posterior_predictive(self, *args, **kwargs):
         df = 2 * self.conjugate_prior.shape_posterior
         loc = self.conjugate_prior.mean_posterior
         scale = np.sqrt(
@@ -110,7 +116,7 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
             mean_prior, prec_prior, shape_prior, rate_prior
         )
 
-    def update_posterior_predictive(self, x_new: np.ndarray):
+    def update_posterior_predictive(self, x_new: np.ndarray, *args, **kwargs):
         """Update posterior predictive conditional on new covariates
         ref: http://ericfrazerlock.com/LM_GoryDetails.pdf
 

@@ -140,7 +140,7 @@ class BayesianOnlineChangepointDetection:
             ].posterior_predictive_pdf(x_new)
         predictive_prob_cond_on_run_legth[
             -1
-        ] = self.conjugate_likelihood.posterior_predictive_pdf(x_new)
+        ] = self.conjugate_likelihoods[-1].posterior_predictive_pdf(x_new)
         return predictive_prob_cond_on_run_legth
 
     def _calc_current_run_start_probs(self):
@@ -158,9 +158,11 @@ class BayesianOnlineChangepointDetection:
             self.conjugate_likelihoods[i].update(
                 x_new
             )  # update conjugate-lik for run starting at time i with newest data
+            self.conjugate_likelihoods[i].update_posterior_predictive(x_new)
         self.conjugate_likelihoods.append(
             deepcopy(self.conjugate_likelihood)
         )  # add conjugate-lik for run starting now
+        self.conjugate_likelihoods[-1].update_posterior_predictive(x_new)
 
     def _expand_buffer(self):
         """Double array dimensions."""
