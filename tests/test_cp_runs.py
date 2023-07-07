@@ -1,10 +1,11 @@
 import numpy as np
 
-from bocd.cp import BayesianOnlineChangepointDetection
 from bocd.conjugate_likelihoods import *
+from bocd.cp import BayesianOnlineChangepointDetection
 from bocd.hazard_functions import ExponentialHazardFunction
 
 np.random.seed(198882)
+
 
 def test_bernoulli_cp_run():
     buffer = 8
@@ -16,7 +17,7 @@ def test_bernoulli_cp_run():
     cp = BayesianOnlineChangepointDetection(
         hazard_func=ExponentialHazardFunction(scale=10),
         conjugate_likelihood=conjugate_lik,
-        buffer=buffer
+        buffer=buffer,
     )
     x_news = np.random.binomial(1, 0.5, run_length)
     x_news = np.expand_dims(x_news, 1)
@@ -24,7 +25,8 @@ def test_bernoulli_cp_run():
         cp.update(x_new)
     cp.sample(10)
     assert True
-    
+
+
 def test_poisson_cp_run():
     buffer = 8
     run_length = 24
@@ -35,7 +37,7 @@ def test_poisson_cp_run():
     cp = BayesianOnlineChangepointDetection(
         hazard_func=ExponentialHazardFunction(scale=10),
         conjugate_likelihood=conjugate_lik,
-        buffer=buffer
+        buffer=buffer,
     )
     x_news = np.random.poisson(3, run_length)
     x_news = np.expand_dims(x_news, 1)
@@ -43,7 +45,8 @@ def test_poisson_cp_run():
         cp.update(x_new)
     cp.sample(10)
     assert True
-    
+
+
 def test_normal_cp_run():
     buffer = 8
     run_length = 24
@@ -56,7 +59,7 @@ def test_normal_cp_run():
     cp = BayesianOnlineChangepointDetection(
         hazard_func=ExponentialHazardFunction(scale=10),
         conjugate_likelihood=conjugate_lik,
-        buffer=buffer
+        buffer=buffer,
     )
     x_news = np.random.normal(2, 5, run_length)
     x_news = np.expand_dims(x_news, 1)
@@ -64,7 +67,8 @@ def test_normal_cp_run():
         cp.update(x_new)
     cp.sample(10)
     assert True
-    
+
+
 def test_normal_ar_p_run():
     buffer = 8
     run_length = 24
@@ -78,16 +82,16 @@ def test_normal_ar_p_run():
         shape_prior=np.array([1]),
         rate_prior=np.array([1]),
         p=p,
-        x_0=x_p
+        x_0=x_p,
     )
     cp = BayesianOnlineChangepointDetection(
         hazard_func=ExponentialHazardFunction(scale=10),
         conjugate_likelihood=conjugate_lik,
-        buffer=buffer
+        buffer=buffer,
     )
-    
+
     x_p = np.hstack([np.ones((1, 1)), x_p])
-    
+
     for i in range(run_length):
         x_new = x_p @ b_true + np.random.normal(0, prec_true)
         cp.update(x_new)
@@ -95,6 +99,6 @@ def test_normal_ar_p_run():
     cp.sample(10)
     assert True
 
-    
+
 if __name__ == "__main__":
     test_normal_ar_p_run()

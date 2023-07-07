@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import numpy as np
 from scipy import stats
 
 from bocd.conjugate_priors import *
-from typing import Optional
 
 
 class BaseConjugateLikelihood(ABC):
@@ -16,7 +16,7 @@ class BaseConjugateLikelihood(ABC):
         """updates conjugate prior"""
         self.update_prior(x_new)
         self.update_posterior_predictive()
-        
+
     def update_prior(self, x_new):
         self.conjugate_prior.update(x_new)
 
@@ -56,7 +56,7 @@ class BernoulliConjugateLikelihood(BaseConjugateLikelihood):
             + self.conjugate_prior.shape2_posterior
         )
         self.posterior_predictive = stats.binom(n=1, p=p)
-        
+
     def posterior_predictive_pdf(self, x):
         return self.posterior_predictive.pmf(x)
 
@@ -75,7 +75,7 @@ class PoissonConjugateLikelihood(BaseConjugateLikelihood):
             self.conjugate_prior.rate_posterior + 1
         )
         self.posterior_predictive = stats.nbinom(n=n, p=p)
-    
+
     def posterior_predictive_pdf(self, x):
         return self.posterior_predictive.pmf(x)
 
@@ -129,7 +129,7 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
 
     def update(self, *args, **kwargs):
         raise NotImplementedError
-    
+
     def update_prior(self, x_new: np.ndarray, y_new: np.ndarray):
         """Update conjugate prior
 
@@ -141,8 +141,7 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
             Dependent variable.
         """
         self.conjugate_prior.update(x_new, y_new)
-        
-        
+
     def update_posterior_predictive(self, x_new: np.ndarray):
         """Update posterior predictive conditional on new covariates
         ref: http://ericfrazerlock.com/LM_GoryDetails.pdf
@@ -166,7 +165,6 @@ class NormalRegressionConjugateLikelihood(BaseConjugateLikelihood):
         self.posterior_predictive = stats.multivariate_t(loc, shape, df)
 
 
-
 class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihood):
     def __init__(
         self,
@@ -175,7 +173,7 @@ class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihoo
         shape_prior: np.ndarray,
         rate_prior: np.ndarray,
         p: int,
-        x_0: Optional[np.ndarray]=None
+        x_0: Optional[np.ndarray] = None,
     ):
         """Conjugate model for AR(p) process.
 
@@ -195,21 +193,22 @@ class AutoRegressiveOrderPConjugateLikelihood(NormalRegressionConjugateLikelihoo
             Most recent 1p1 obvs, by default None
         """
         super().__init__(mean_prior, prec_prior, shape_prior, rate_prior)
-        self.p = p 
+        self.p = p
         if x_0 is not None:
             self.x_p = np.hstack([np.ones((1, 1)), x_0])  # p most recent obvs
         else:
-            self.x_p = np.zeros((1, p+1))
+            self.x_p = np.zeros((1, p + 1))
             self.x_p[0][0] += 1
         self.update_posterior_predictive()
-        
+
     def update(self, x_new):
         """updates conjugate prior"""
         super().update_prior(x_new=self.x_p, y_new=x_new)
-        self.x_p = np.expand_dims(np.hstack([self.x_p[0][0], x_new[0], self.x_p[0][1:-1]]), 0)
+        self.x_p = np.expand_dims(
+            np.hstack([self.x_p[0][0], x_new[0], self.x_p[0][1:-1]]), 0
+        )
         self.update_posterior_predictive()
-        
+
     def update_posterior_predictive(self):
         """Updates posterior predictive distribution."""
         super().update_posterior_predictive(self.x_p)
-    

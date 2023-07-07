@@ -138,9 +138,9 @@ class BayesianOnlineChangepointDetection:
             predictive_prob_cond_on_run_legth[i] += self.conjugate_likelihoods[
                 i
             ].posterior_predictive_pdf(x_new)
-        predictive_prob_cond_on_run_legth[
+        predictive_prob_cond_on_run_legth[-1] = self.conjugate_likelihoods[
             -1
-        ] = self.conjugate_likelihoods[-1].posterior_predictive_pdf(x_new)
+        ].posterior_predictive_pdf(x_new)
         return predictive_prob_cond_on_run_legth
 
     def _calc_current_run_start_probs(self):

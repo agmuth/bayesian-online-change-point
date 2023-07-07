@@ -103,4 +103,3 @@ def test_normal_regression_multivariate_normal_gamma_mean_convergence():
     assert np.isclose(
         np.linalg.norm(model.conjugate_prior.mean_posterior - b_true), 0, atol=1e-1
     )
-
